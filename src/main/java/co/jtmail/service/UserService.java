@@ -1,6 +1,7 @@
 package co.jtmail.service;
 
 import co.jtmail.dto.request.CreateUserRequest;
+import co.jtmail.dto.request.UpdateUserRequest;
 import co.jtmail.dto.response.UserResponse;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public interface UserService {
     UserResponse createUser(CreateUserRequest request);
 
     // Actualizar usuario
-    UserResponse updateUser(UUID id, CreateUserRequest request);
+    UserResponse updateUser(UUID id, UpdateUserRequest request);
 
     // Eliminar Usuario
     void deleteUser(UUID id);

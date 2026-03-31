@@ -42,4 +42,10 @@ public class GlobalExceptionHandler {
                 ErrorResponse.of("Internal server error", null)
         );
     }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(ex.getMessage(), null)); // 409
+    }
 }

@@ -1,6 +1,7 @@
 package co.jtmail.controller;
 
 import co.jtmail.dto.request.CreateUserRequest;
+import co.jtmail.dto.request.UpdateUserRequest;
 import co.jtmail.dto.response.UserResponse;
 import co.jtmail.service.UserService;
 import jakarta.validation.Valid;
@@ -40,7 +41,7 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID id,
-            @Valid @RequestBody CreateUserRequest request
+            @Valid @RequestBody UpdateUserRequest request
     ) {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }

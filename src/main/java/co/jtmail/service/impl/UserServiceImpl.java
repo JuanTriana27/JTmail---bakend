@@ -1,7 +1,10 @@
 package co.jtmail.service.impl;
 
 import co.jtmail.dto.request.CreateUserRequest;
+import co.jtmail.dto.request.UpdateUserRequest;
 import co.jtmail.dto.response.UserResponse;
+import co.jtmail.exception.ConflictException;
+import co.jtmail.exception.ResourceNotFoundException;
 import co.jtmail.mapper.UserMapper;
 import co.jtmail.model.User;
 import co.jtmail.repository.UserRepository;
@@ -31,7 +34,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: ", id));
 
         return UserMapper.toResponse(user);
     }
@@ -42,7 +45,7 @@ public class UserServiceImpl implements UserService {
 
         // Validación de negocio
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("El email ya está registrado");
+            throw new ConflictException("El email ya está registrado");
         }
 
         // Mapear request → entity
@@ -58,27 +61,17 @@ public class UserServiceImpl implements UserService {
         return UserMapper.toResponse(user);
     }
 
-    // Actualizar Usuraio
+    // ← cambia CreateUserRequest por UpdateUserRequest
     @Override
-    public UserResponse updateUser(UUID id, CreateUserRequest request) {
-
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", id)); // ← excepción correcta
 
-        // Validar email si cambia
-        if (!user.getEmail().equals(request.getEmail())
-                && userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("El email ya está en uso");
-        }
-
-        // Update controlado
-        user.setEmail(request.getEmail());
         user.setFullName(request.getFullName());
         user.setAvatarUrl(request.getAvatarUrl());
+        // Email no se toca en update
 
-        user = userRepository.save(user);
-
-        return UserMapper.toResponse(user);
+        return UserMapper.toResponse(userRepository.save(user));
     }
 
     // Eliminar Usuaro
@@ -86,7 +79,7 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(UUID id) {
 
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("No existe usuario con id: " + id);
+            throw new ResourceNotFoundException("No existe usuario con id: ", id);
         }
 
         userRepository.deleteById(id);

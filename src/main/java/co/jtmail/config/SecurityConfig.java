@@ -15,7 +15,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Endpoints abiertos por ahora — cuando llegue JWT esto cambia
+    // Endpoints abiertos por ahora — luego con jwt cambiara
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

@@ -39,7 +39,7 @@ public class UserController {
     }
 
     // Update tiene su propio DTO: no tiene sentido reusar CreateUserRequest
-    // porque los campos requeridos en creación no son los mismos que en edición
+    // porque los campos requeridos en creacion no son los mismos que en edición
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID id,
@@ -67,6 +67,7 @@ public class UserController {
         return ResponseEntity.noContent().build(); // 204 — no hay nada útil que retornar
     }
 
+    // ELIMINAR USER
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);

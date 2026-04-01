@@ -1,6 +1,8 @@
 package co.jtmail.service.impl;
 
 import co.jtmail.dto.request.CreateUserRequest;
+import co.jtmail.dto.request.UpdateEmailRequest;
+import co.jtmail.dto.request.UpdatePasswordRequest;
 import co.jtmail.dto.request.UpdateUserRequest;
 import co.jtmail.dto.response.UserResponse;
 import co.jtmail.exception.ConflictException;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,6 +32,9 @@ class UserServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -43,6 +49,7 @@ class UserServiceImplTest {
                 .idUser(userId)
                 .email("juan@test.com")
                 .fullName("Juan Torres")
+                .passwordHash("$2a$10$hasheado")
                 .isActive(true)
                 .unreadCount(0)
                 .createdAt(Instant.now())
@@ -160,6 +167,111 @@ class UserServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         // Confirma que nunca intentó guardar un usuario inexistente
+        verify(userRepository, never()).save(any());
+    }
+
+    // ─── updateEmail ───────────────────────────────────────────
+
+    @Test
+    void updateEmail_actualizaYRetornaUsuario() {
+        UpdateEmailRequest request = UpdateEmailRequest.builder()
+                .email("nuevo@test.com")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenReturn(mockUser);
+
+        UserResponse result = userService.updateEmail(userId, request);
+
+        assertThat(result).isNotNull();
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateEmail_lanzaConflictCuandoEmailYaExiste() {
+        UpdateEmailRequest request = UpdateEmailRequest.builder()
+                .email("ocupado@test.com")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.updateEmail(userId, request))
+                .isInstanceOf(ConflictException.class);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateEmail_lanzaExcepcionCuandoUsuarioNoExiste() {
+        UpdateEmailRequest request = UpdateEmailRequest.builder()
+                .email("nuevo@test.com")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.updateEmail(userId, request))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+// ─── updatePassword ────────────────────────────────────────
+
+    @Test
+    void updatePassword_actualizaCorrectamente() {
+        UpdatePasswordRequest request = UpdatePasswordRequest.builder()
+                .currentPassword("actual1234")
+                .newPassword("nueva5678")
+                .confirmPassword("nueva5678")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        // Simula que la contraseña actual es correcta
+        when(passwordEncoder.matches(request.getCurrentPassword(), mockUser.getPasswordHash()))
+                .thenReturn(true);
+        when(userRepository.save(any(User.class))).thenReturn(mockUser);
+
+        userService.updatePassword(userId, request);
+
+        verify(userRepository).save(any(User.class));
+        verify(passwordEncoder).encode(request.getNewPassword());
+    }
+
+    @Test
+    void updatePassword_lanzaConflictCuandoPasswordActualEsIncorrecta() {
+        UpdatePasswordRequest request = UpdatePasswordRequest.builder()
+                .currentPassword("incorrecta")
+                .newPassword("nueva5678")
+                .confirmPassword("nueva5678")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches(request.getCurrentPassword(), mockUser.getPasswordHash()))
+                .thenReturn(false); // password actual no coincide
+
+        assertThatThrownBy(() -> userService.updatePassword(userId, request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("incorrecta");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updatePassword_lanzaConflictCuandoPasswordsNoCoinciden() {
+        UpdatePasswordRequest request = UpdatePasswordRequest.builder()
+                .currentPassword("actual1234")
+                .newPassword("nueva5678")
+                .confirmPassword("diferente999") // no coincide
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches(request.getCurrentPassword(), mockUser.getPasswordHash()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> userService.updatePassword(userId, request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("coinciden");
+
         verify(userRepository, never()).save(any());
     }
 
